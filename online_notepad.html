@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SyncPad - Real-Time Collaborative Notepad</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['Fira Code', 'monospace'],
+                        serif: ['Lora', 'serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #374151;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .editor-textarea {
+            resize: none;
+            outline: none;
+        }
+    </style>
+</head>
+<body class="h-full bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-sans transition-colors duration-200 flex flex-col overflow-hidden">
+
+    <!-- Top Navigation Header -->
+    <header class="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur px-4 lg:px-8 flex items-center justify-between shrink-0 z-10">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-brand-500 text-white flex items-center justify-center shadow-lg shadow-brand-500/20">
+                <i class="fa-solid fa-file-pen text-xl"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-lg leading-none tracking-tight">SyncPad</h1>
+                <p class="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">Real-Time Web Notepad</p>
+            </div>
+        </div>
+
+        <!-- Sync Indicator & Global Actions -->
+        <div class="flex items-center space-x-2 md:space-x-4">
+            <!-- Sync Status Badge -->
+            <div id="sync-status" class="flex items-center space-x-2 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-medium text-slate-600 dark:text-slate-300">
+                <span id="sync-icon-container" class="relative flex h-2.5 w-2.5">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                </span>
+                <span id="sync-text">Connecting...</span>
+            </div>
+
+            <!-- How it works Info Button -->
+            <button id="info-btn" class="p-2 rounded-lg text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" title="Deployment & Info">
+                <i class="fa-solid fa-circle-info text-base"></i>
+            </button>
+
+            <!-- Share Room Link Button -->
+            <button id="share-btn" class="flex items-center space-x-2 px-3.5 py-1.5 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold shadow-sm transition-all active:scale-95">
+                <i class="fa-solid fa-share-nodes"></i>
+                <span class="hidden md:inline">Share Link</span>
+            </button>
+
+            <!-- Dark / Light Theme Toggle -->
+            <button id="theme-toggle" class="p-2 rounded-lg text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                <i id="theme-icon" class="fa-solid fa-moon text-base"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Document Sub-bar / Room Bar -->
+    <div class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 lg:px-8 py-2.5 flex flex-wrap items-center justify-between gap-3 shrink-0">
+        <!-- Room Selector -->
+        <div class="flex items-center space-x-2 min-w-0 flex-1">
+            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider hidden sm:inline">Pad ID:</span>
+            <div class="relative flex-1 max-w-xs">
+                <input type="text" id="room-input" class="w-full bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-mono font-semibold px-3 py-1.5 rounded-md border border-transparent focus:border-brand-500 focus:bg-white dark:focus:bg-slate-900 focus:outline-none transition-all" value="global-notes" placeholder="Room identifier...">
+            </div>
+            <button id="join-room-btn" class="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-md transition-colors">
+                Go
+            </button>
+        </div>
+
+        <!-- Toolbar Controls -->
+        <div class="flex items-center space-x-1 sm:space-x-2">
+            <!-- Font Style Dropdown -->
+            <select id="font-selector" class="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium px-2.5 py-1.5 rounded border border-transparent focus:outline-none cursor-pointer">
+                <option value="sans">Sans-Serif</option>
+                <option value="serif">Serif</option>
+                <option value="mono">Monospace</option>
+            </select>
+
+            <!-- Download TXT Button -->
+            <button id="download-btn" class="px-2.5 py-1.5 rounded text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center space-x-1 transition-colors" title="Download .txt">
+                <i class="fa-solid fa-download"></i>
+                <span class="hidden sm:inline">Download</span>
+            </button>
+
+            <!-- Clear Text Button -->
+            <button id="clear-btn" class="px-2.5 py-1.5 rounded text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/30 dark:hover:text-rose-400 flex items-center space-x-1 transition-colors" title="Clear Document">
+                <i class="fa-solid fa-trash-can"></i>
+                <span class="hidden sm:inline">Clear</span>
+            </button>
+
+            <!-- Copy Clipboard Button -->
+            <button id="copy-btn" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white text-xs font-medium flex items-center space-x-1.5 shadow-sm transition-all active:scale-95">
+                <i class="fa-regular fa-copy"></i>
+                <span id="copy-btn-text">Copy</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Editor Content Area -->
+    <main class="flex-1 relative flex flex-col bg-white dark:bg-slate-950 overflow-hidden">
+        <textarea id="editor" class="editor-textarea w-full h-full p-4 sm:p-6 lg:p-10 bg-transparent text-slate-800 dark:text-slate-100 text-base lg:text-lg leading-relaxed font-sans focus:outline-none" placeholder="Type here... Changes automatically sync across all users with this link in real-time."></textarea>
+
+        <!-- Floating Live Updates Toast -->
+        <div id="activity-toast" class="absolute bottom-6 right-6 bg-slate-900/90 dark:bg-slate-800/90 text-white text-xs px-3.5 py-2 rounded-lg shadow-xl backdrop-blur flex items-center space-x-2 transition-all duration-300 transform translate-y-10 opacity-0 pointer-events-none border border-slate-700">
+            <span class="w-2 h-2 rounded-full bg-brand-500 animate-pulse"></span>
+            <span id="activity-toast-text">Updated from another device</span>
+        </div>
+    </main>
+
+    <!-- Bottom Footer Stats Bar -->
+    <footer class="h-9 border-t border-slate-200 dark:border-slate-800 bg-slate-100/80 dark:bg-slate-900/80 px-4 lg:px-8 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 shrink-0 font-medium">
+        <div class="flex items-center space-x-4">
+            <div><span id="stat-words" class="text-slate-800 dark:text-slate-200 font-semibold">0</span> words</div>
+            <div><span id="stat-chars" class="text-slate-800 dark:text-slate-200 font-semibold">0</span> characters</div>
+            <div class="hidden sm:block"><span id="stat-lines" class="text-slate-800 dark:text-slate-200 font-semibold">0</span> lines</div>
+        </div>
+
+        <div class="flex items-center space-x-3">
+            <span id="typing-status" class="text-xs italic text-brand-600 dark:text-brand-400 font-normal"></span>
+            <span id="last-updated">Saved</span>
+        </div>
+    </footer>
+
+    <!-- Modal Backdrop -->
+    <div id="modal-backdrop" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-200">
+        <!-- Share Modal -->
+        <div id="share-modal" class="hidden bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-md w-full p-6 transform transition-all duration-200">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-lg font-bold text-slate-900 dark:text-white">Share Live Pad</h3>
+                <button class="close-modal-btn text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <p class="text-sm text-slate-600 dark:text-slate-300 mb-4">Anyone with this URL can view and edit this pad in real-time from any network or Wi-Fi.</p>
+            <div class="flex items-center space-x-2 bg-slate-100 dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-700 mb-4">
+                <input id="share-url-input" type="text" readonly class="bg-transparent text-xs font-mono text-slate-700 dark:text-slate-300 flex-1 outline-none px-2" value="">
+                <button id="copy-share-url-btn" class="px-3 py-1.5 bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold rounded-lg transition-colors">
+                    Copy Link
+                </button>
+            </div>
+        </div>
+
+        <!-- Info & Deployment Modal -->
+        <div id="info-modal" class="hidden bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-lg w-full p-6 transform transition-all duration-200">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <i class="fa-solid fa-cloud-arrow-up text-brand-500"></i> Deployment & Setup
+                </h3>
+                <button class="close-modal-btn text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="space-y-3 text-xs sm:text-sm text-slate-600 dark:text-slate-300">
+                <p>This web app is 100% self-contained and ready to host anywhere!</p>
+                <div class="bg-slate-100 dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-700 font-mono text-xs space-y-1">
+                    <p class="font-bold text-slate-800 dark:text-slate-200">Deployment Steps (Vercel/Netlify):</p>
+                    <p>1. Put this `index.html` in a folder or Git repo.</p>
+                    <p>2. Drag-and-drop or push to Vercel / Netlify / GitHub Pages.</p>
+                    <p>3. Open your generated web link on any phone or PC!</p>
+                </div>
+                <p><strong>Note:</strong> Built with Firebase Firestore logic. Automatically syncs edits across devices accessing the same room ID link.</p>
+            </div>
+            <div class="mt-5 flex justify-end">
+                <button class="close-modal-btn px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold rounded-lg transition-colors">
+                    Got it!
+                </button>
+            </div>
+        </div>
+
+        <!-- Custom Safety Prompt Confirmation Modal -->
+        <div id="confirm-modal" class="hidden bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-sm w-full p-6 transform transition-all duration-200">
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-2">Clear Document?</h3>
+            <p class="text-sm text-slate-600 dark:text-slate-300 mb-5">This will clear the document content for everyone currently viewing this room. This action cannot be undone.</p>
+            <div class="flex justify-end space-x-2">
+                <button id="cancel-confirm-btn" class="px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-lg transition-colors">
+                    Cancel
+                </button>
+                <button id="proceed-confirm-btn" class="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white text-xs font-semibold rounded-lg transition-colors">
+                    Clear Pad
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // App ID and Configuration initialization
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'syncpad-notes';
+        
+        // Default public demo Firebase configuration fallback for instant zero-config deployments
+        const firebaseConfig = typeof __firebase_config !== 'undefined' 
+            ? JSON.parse(__firebase_config) 
+            : {
+                apiKey: "AIzaSyDemoKeyOnlyForDevelopmentProcess",
+                authDomain: "demo-app.firebaseapp.com",
+                projectId: "demo-app",
+                storageBucket: "demo-app.appspot.com",
+                messagingSenderId: "123456789",
+                appId: "1:123456789:web:demo"
+            };
+
+        // Initialize Firebase
+        const firebaseApp = initializeApp(firebaseConfig);
+        const auth = getAuth(firebaseApp);
+        const db = getFirestore(firebaseApp);
+
+        // State Variables
+        let currentUser = null;
+        let currentRoomId = 'global-notes';
+        let unsubscribeDocListener = null;
+        let isLocalTyping = false;
+        let saveTimeout = null;
+        let typingIndicatorTimeout = null;
+
+        // UI Element References
+        const editor = document.getElementById('editor');
+        const roomInput = document.getElementById('room-input');
+        const joinRoomBtn = document.getElementById('join-room-btn');
+        const syncStatusText = document.getElementById('sync-text');
+        const syncIconContainer = document.getElementById('sync-icon-container');
+        const lastUpdatedEl = document.getElementById('last-updated');
+        const typingStatusEl = document.getElementById('typing-status');
+        const statWords = document.getElementById('stat-words');
+        const statChars = document.getElementById('stat-chars');
+        const statLines = document.getElementById('stat-lines');
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const themeIcon = document.getElementById('theme-icon');
+        const fontSelector = document.getElementById('font-selector');
+        const copyBtn = document.getElementById('copy-btn');
+        const copyBtnText = document.getElementById('copy-btn-text');
+        const clearBtn = document.getElementById('clear-btn');
+        const downloadBtn = document.getElementById('download-btn');
+        const shareBtn = document.getElementById('share-btn');
+        const infoBtn = document.getElementById('info-btn');
+        
+        // Modal references
+        const modalBackdrop = document.getElementById('modal-backdrop');
+        const shareModal = document.getElementById('share-modal');
+        const infoModal = document.getElementById('info-modal');
+        const confirmModal = document.getElementById('confirm-modal');
+        const shareUrlInput = document.getElementById('share-url-input');
+        const copyShareUrlBtn = document.getElementById('copy-share-url-btn');
+        const closeModalBtns = document.querySelectorAll('.close-modal-btn');
+        const cancelConfirmBtn = document.getElementById('cancel-confirm-btn');
+        const proceedConfirmBtn = document.getElementById('proceed-confirm-btn');
+        const activityToast = document.getElementById('activity-toast');
+
+        // Authentication Handler
+        async function initAuth() {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (err) {
+                console.warn("Auth initialization fallback:", err);
+                // Fallback attempt
+                try { await signInAnonymously(auth); } catch(e){}
+            }
+        }
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                // Parse Hash room if exists
+                const hashRoom = window.location.hash.replace('#', '').trim();
+                if (hashRoom) {
+                    currentRoomId = sanitizeRoomId(hashRoom);
+                    roomInput.value = currentRoomId;
+                }
+                attachRoomListener(currentRoomId);
+            }
+        });
+
+        function getPadDocRef(roomId) {
+            // RULE 1: STRICT PATH compliance for Firestore artifacts
+            return doc(db, 'artifacts', appId, 'public', 'data', 'pads', roomId);
+        }
+
+        function sanitizeRoomId(rawId) {
+            return rawId.toLowerCase().replace(/[^a-z0-9_-]/g, '-').slice(0, 50) || 'global-notes';
+        }
+
+        function attachRoomListener(roomId) {
+            if (!currentUser) return;
+
+            if (unsubscribeDocListener) unsubscribeDocListener();
+
+            updateSyncUI('syncing', 'Connecting...');
+            const docRef = getPadDocRef(roomId);
+
+            unsubscribeDocListener = onSnapshot(docRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    const newText = data.content || '';
+                    const updatedBy = data.updatedBy || '';
+
+                    // Preserving cursor position during remote edits when not actively typing
+                    if (!isLocalTyping && newText !== editor.value) {
+                        const start = editor.selectionStart;
+                        const end = editor.selectionEnd;
+                        editor.value = newText;
+                        
+                        // Try to preserve cursor position if reasonable
+                        if (start <= newText.length) {
+                            editor.setSelectionRange(start, end);
+                        }
+                        updateStats();
+
+                        if (updatedBy && updatedBy !== currentUser.uid) {
+                            showActivityToast('Remote changes synced');
+                        }
+                    }
+
+                    if (data.updatedAt) {
+                        lastUpdatedEl.textContent = 'Synced';
+                    }
+                } else {
+                    if (!isLocalTyping) {
+                        editor.value = '';
+                        updateStats();
+                    }
+                    saveDocumentContent('');
+                }
+                updateSyncUI('connected', 'Synced');
+            }, (error) => {
+                console.error("Firestore error:", error);
+                updateSyncUI('error', 'Sync Paused');
+            });
+        }
+
+        function saveDocumentContent(content) {
+            if (!currentUser) return;
+
+            updateSyncUI('syncing', 'Saving...');
+            const docRef = getPadDocRef(currentRoomId);
+
+            setDoc(docRef, {
+                content: content,
+                updatedAt: serverTimestamp(),
+                updatedBy: currentUser.uid
+            }, { merge: true })
+            .then(() => {
+                updateSyncUI('connected', 'Synced');
+                lastUpdatedEl.textContent = 'Saved ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            })
+            .catch((err) => {
+                console.error("Save error:", err);
+                updateSyncUI('error', 'Error Saving');
+            });
+        }
+
+        function updateSyncUI(status, label) {
+            syncStatusText.textContent = label;
+            if (status === 'connected') {
+                syncIconContainer.innerHTML = `
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                `;
+            } else if (status === 'syncing') {
+                syncIconContainer.innerHTML = `
+                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500 animate-spin"></span>
+                `;
+            } else {
+                syncIconContainer.innerHTML = `
+                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span>
+                `;
+            }
+        }
+
+        function updateStats() {
+            const text = editor.value;
+            const chars = text.length;
+            const words = text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
+            const lines = text === '' ? 0 : text.split('\n').length;
+
+            statWords.textContent = words.toLocaleString();
+            statChars.textContent = chars.toLocaleString();
+            statLines.textContent = lines.toLocaleString();
+        }
+
+        function showActivityToast(msg) {
+            activityToast.textContent = msg;
+            activityToast.classList.remove('translate-y-10', 'opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                activityToast.classList.add('translate-y-10', 'opacity-0', 'pointer-events-none');
+            }, 2500);
+        }
+
+        // Event Handlers
+        editor.addEventListener('input', () => {
+            isLocalTyping = true;
+            updateStats();
+            typingStatusEl.textContent = 'Typing...';
+
+            clearTimeout(saveTimeout);
+            clearTimeout(typingIndicatorTimeout);
+
+            // Debounced save (600ms)
+            saveTimeout = setTimeout(() => {
+                saveDocumentContent(editor.value);
+                isLocalTyping = false;
+            }, 600);
+
+            typingIndicatorTimeout = setTimeout(() => {
+                typingStatusEl.textContent = '';
+            }, 1200);
+        });
+
+        // Room Navigation
+        function handleJoinRoom() {
+            const newRoom = sanitizeRoomId(roomInput.value);
+            if (newRoom && newRoom !== currentRoomId) {
+                currentRoomId = newRoom;
+                window.location.hash = newRoom;
+                attachRoomListener(currentRoomId);
+                showActivityToast(`Joined: ${currentRoomId}`);
+            }
+        }
+
+        joinRoomBtn.addEventListener('click', handleJoinRoom);
+        roomInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') handleJoinRoom();
+        });
+
+        // Font Style Switching
+        fontSelector.addEventListener('change', (e) => {
+            const font = e.target.value;
+            editor.classList.remove('font-sans', 'font-serif', 'font-mono');
+            if (font === 'serif') editor.classList.add('font-serif');
+            else if (font === 'mono') editor.classList.add('font-mono');
+            else editor.classList.add('font-sans');
+        });
+
+        // Download TXT File
+        downloadBtn.addEventListener('click', () => {
+            const blob = new Blob([editor.value], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${currentRoomId}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+
+        // Copy Text
+        copyBtn.addEventListener('click', () => {
+            if (!editor.value) return;
+            const temp = document.createElement("textarea");
+            temp.value = editor.value;
+            document.body.appendChild(temp);
+            temp.select();
+            document.execCommand('copy');
+            document.body.removeChild(temp);
+
+            copyBtnText.textContent = 'Copied!';
+            setTimeout(() => copyBtnText.textContent = 'Copy', 2000);
+        });
+
+        // Clear Document with Modal Prompt
+        clearBtn.addEventListener('click', () => {
+            openModal(confirmModal);
+        });
+
+        cancelConfirmBtn.addEventListener('click', closeModal);
+        proceedConfirmBtn.addEventListener('click', () => {
+            editor.value = '';
+            updateStats();
+            saveDocumentContent('');
+            closeModal();
+        });
+
+        // Theme Toggle
+        themeToggleBtn.addEventListener('click', () => {
+            const isDark = document.documentElement.classList.toggle('dark');
+            themeIcon.className = isDark ? 'fa-solid fa-sun text-base text-amber-400' : 'fa-solid fa-moon text-base';
+        });
+
+        function openModal(targetModal) {
+            shareModal.classList.add('hidden');
+            infoModal.classList.add('hidden');
+            confirmModal.classList.add('hidden');
+
+            targetModal.classList.remove('hidden');
+            modalBackdrop.classList.remove('opacity-0', 'pointer-events-none');
+        }
+
+        function closeModal() {
+            modalBackdrop.classList.add('opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                shareModal.classList.add('hidden');
+                infoModal.classList.add('hidden');
+                confirmModal.classList.add('hidden');
+            }, 200);
+        }
+
+        shareBtn.addEventListener('click', () => {
+            const shareUrl = `${window.location.origin}${window.location.pathname}#${currentRoomId}`;
+            shareUrlInput.value = shareUrl;
+            openModal(shareModal);
+        });
+
+        infoBtn.addEventListener('click', () => {
+            openModal(infoModal);
+        });
+
+        closeModalBtns.forEach(btn => btn.addEventListener('click', closeModal));
+
+        copyShareUrlBtn.addEventListener('click', () => {
+            shareUrlInput.select();
+            document.execCommand('copy');
+            copyShareUrlBtn.textContent = 'Copied!';
+            setTimeout(() => copyShareUrlBtn.textContent = 'Copy Link', 2000);
+        });
+
+        // Initialization
+        window.addEventListener('DOMContentLoaded', () => {
+            initAuth();
+            updateStats();
+        });
+    </script>
+</body>
+</html>
