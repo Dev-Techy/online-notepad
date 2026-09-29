@@ -3,11 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SyncPad - Real-Time Collaborative Notepad</title>
+    <title>SyncPad - Live Collaborative Notepad</title>
+    
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -36,6 +39,7 @@
             }
         }
     </script>
+    
     <style>
         ::-webkit-scrollbar {
             width: 8px;
@@ -73,15 +77,20 @@
         </div>
 
         <!-- Sync Indicator & Global Actions -->
-        <div class="flex items-center space-x-2 md:space-x-4">
+        <div class="flex items-center space-x-2 md:space-x-3">
             <!-- Sync Status Badge -->
             <div id="sync-status" class="flex items-center space-x-2 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-medium text-slate-600 dark:text-slate-300">
                 <span id="sync-icon-container" class="relative flex h-2.5 w-2.5">
-                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
                 </span>
                 <span id="sync-text">Connecting...</span>
             </div>
+
+            <!-- Custom Firebase Config Button -->
+            <button id="config-btn" class="p-2 rounded-lg text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" title="Firebase Settings">
+                <i class="fa-solid fa-gear text-base"></i>
+            </button>
 
             <!-- How it works Info Button -->
             <button id="info-btn" class="p-2 rounded-lg text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" title="Deployment & Info">
@@ -91,11 +100,11 @@
             <!-- Share Room Link Button -->
             <button id="share-btn" class="flex items-center space-x-2 px-3.5 py-1.5 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold shadow-sm transition-all active:scale-95">
                 <i class="fa-solid fa-share-nodes"></i>
-                <span class="hidden md:inline">Share Link</span>
+                <span class="hidden md:inline">Share Pad</span>
             </button>
 
             <!-- Dark / Light Theme Toggle -->
-            <button id="theme-toggle" class="p-2 rounded-lg text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+            <button id="theme-toggle" class="p-2 rounded-lg text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" title="Toggle Theme">
                 <i id="theme-icon" class="fa-solid fa-moon text-base"></i>
             </button>
         </div>
@@ -105,9 +114,9 @@
     <div class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 lg:px-8 py-2.5 flex flex-wrap items-center justify-between gap-3 shrink-0">
         <!-- Room Selector -->
         <div class="flex items-center space-x-2 min-w-0 flex-1">
-            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider hidden sm:inline">Pad ID:</span>
+            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider hidden sm:inline">Pad Room:</span>
             <div class="relative flex-1 max-w-xs">
-                <input type="text" id="room-input" class="w-full bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-mono font-semibold px-3 py-1.5 rounded-md border border-transparent focus:border-brand-500 focus:bg-white dark:focus:bg-slate-900 focus:outline-none transition-all" value="global-notes" placeholder="Room identifier...">
+                <input type="text" id="room-input" class="w-full bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-mono font-semibold px-3 py-1.5 rounded-md border border-transparent focus:border-brand-500 focus:bg-white dark:focus:bg-slate-900 focus:outline-none transition-all" value="public-pad" placeholder="Room identifier...">
             </div>
             <button id="join-room-btn" class="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-md transition-colors">
                 Go
@@ -116,6 +125,13 @@
 
         <!-- Toolbar Controls -->
         <div class="flex items-center space-x-1 sm:space-x-2">
+            <!-- Text Size Controls -->
+            <div class="flex items-center bg-slate-100 dark:bg-slate-800 rounded p-0.5">
+                <button id="font-decrease" class="w-7 h-7 flex items-center justify-center text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors" title="Decrease Font Size">A-</button>
+                <span id="font-size-label" class="text-xs font-semibold px-1 text-slate-500">16</span>
+                <button id="font-increase" class="w-7 h-7 flex items-center justify-center text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors" title="Increase Font Size">A+</button>
+            </div>
+
             <!-- Font Style Dropdown -->
             <select id="font-selector" class="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium px-2.5 py-1.5 rounded border border-transparent focus:outline-none cursor-pointer">
                 <option value="sans">Sans-Serif</option>
@@ -124,7 +140,7 @@
             </select>
 
             <!-- Download TXT Button -->
-            <button id="download-btn" class="px-2.5 py-1.5 rounded text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center space-x-1 transition-colors" title="Download .txt">
+            <button id="download-btn" class="px-2.5 py-1.5 rounded text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center space-x-1 transition-colors" title="Download as .txt">
                 <i class="fa-solid fa-download"></i>
                 <span class="hidden sm:inline">Download</span>
             </button>
@@ -138,19 +154,19 @@
             <!-- Copy Clipboard Button -->
             <button id="copy-btn" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white text-xs font-medium flex items-center space-x-1.5 shadow-sm transition-all active:scale-95">
                 <i class="fa-regular fa-copy"></i>
-                <span id="copy-btn-text">Copy</span>
+                <span id="copy-btn-text">Copy All</span>
             </button>
         </div>
     </div>
 
     <!-- Main Editor Content Area -->
     <main class="flex-1 relative flex flex-col bg-white dark:bg-slate-950 overflow-hidden">
-        <textarea id="editor" class="editor-textarea w-full h-full p-4 sm:p-6 lg:p-10 bg-transparent text-slate-800 dark:text-slate-100 text-base lg:text-lg leading-relaxed font-sans focus:outline-none" placeholder="Type here... Changes automatically sync across all users with this link in real-time."></textarea>
+        <textarea id="editor" class="editor-textarea w-full h-full p-4 sm:p-6 lg:p-10 bg-transparent text-slate-800 dark:text-slate-100 text-base leading-relaxed font-sans focus:outline-none" placeholder="Type here... Changes automatically sync across all users on this room hash in real-time."></textarea>
 
         <!-- Floating Live Updates Toast -->
         <div id="activity-toast" class="absolute bottom-6 right-6 bg-slate-900/90 dark:bg-slate-800/90 text-white text-xs px-3.5 py-2 rounded-lg shadow-xl backdrop-blur flex items-center space-x-2 transition-all duration-300 transform translate-y-10 opacity-0 pointer-events-none border border-slate-700">
             <span class="w-2 h-2 rounded-full bg-brand-500 animate-pulse"></span>
-            <span id="activity-toast-text">Updated from another device</span>
+            <span id="activity-toast-text">Synced from another device</span>
         </div>
     </main>
 
@@ -170,6 +186,7 @@
 
     <!-- Modal Backdrop -->
     <div id="modal-backdrop" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-200">
+        
         <!-- Share Modal -->
         <div id="share-modal" class="hidden bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-md w-full p-6 transform transition-all duration-200">
             <div class="flex items-center justify-between mb-2">
@@ -185,35 +202,63 @@
             </div>
         </div>
 
+        <!-- Custom Firebase Config Modal -->
+        <div id="config-modal" class="hidden bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-lg w-full p-6 transform transition-all duration-200">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <i class="fa-solid fa-fire text-amber-500"></i> Firebase Credentials
+                </h3>
+                <button class="close-modal-btn text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <p class="text-xs text-slate-600 dark:text-slate-300 mb-3">
+                By default, SyncPad connects to an automatic public test room. If you want full control over your own private database, paste your Firebase project JSON configuration below:
+            </p>
+            <textarea id="firebase-json-input" rows="7" class="w-full bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-mono text-xs p-3 rounded-lg border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-brand-500" placeholder='{
+  "apiKey": "YOUR_API_KEY",
+  "authDomain": "YOUR_PROJECT.firebaseapp.com",
+  "projectId": "YOUR_PROJECT_ID",
+  "storageBucket": "YOUR_PROJECT.appspot.com",
+  "messagingSenderId": "123456789",
+  "appId": "1:123456789:web:abc"
+}'></textarea>
+            <div class="mt-4 flex items-center justify-between">
+                <button id="reset-config-btn" class="text-xs text-slate-500 hover:text-rose-500 underline">Reset to Default</button>
+                <div class="flex space-x-2">
+                    <button class="close-modal-btn px-3 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-lg transition-colors">Cancel</button>
+                    <button id="save-config-btn" class="px-4 py-1.5 bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold rounded-lg transition-colors">Save & Reload</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Info & Deployment Modal -->
         <div id="info-modal" class="hidden bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-lg w-full p-6 transform transition-all duration-200">
             <div class="flex items-center justify-between mb-3">
                 <h3 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <i class="fa-solid fa-cloud-arrow-up text-brand-500"></i> Deployment & Setup
+                    <i class="fa-solid fa-cloud-arrow-up text-brand-500"></i> Deployment Guide
                 </h3>
                 <button class="close-modal-btn text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
             <div class="space-y-3 text-xs sm:text-sm text-slate-600 dark:text-slate-300">
-                <p>This web app is 100% self-contained and ready to host anywhere!</p>
+                <p>This web application is completely self-contained in a single file!</p>
                 <div class="bg-slate-100 dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-700 font-mono text-xs space-y-1">
-                    <p class="font-bold text-slate-800 dark:text-slate-200">Deployment Steps (Vercel/Netlify):</p>
-                    <p>1. Put this `index.html` in a folder or Git repo.</p>
-                    <p>2. Drag-and-drop or push to Vercel / Netlify / GitHub Pages.</p>
-                    <p>3. Open your generated web link on any phone or PC!</p>
+                    <p class="font-bold text-slate-800 dark:text-slate-200">To deploy on Vercel or Netlify:</p>
+                    <p>1. Name this file <code>index.html</code>.</p>
+                    <p>2. Push to GitHub or drag-and-drop into Netlify/Vercel.</p>
+                    <p>3. Access your link on any Wi-Fi or phone!</p>
                 </div>
-                <p><strong>Note:</strong> Built with Firebase Firestore logic. Automatically syncs edits across devices accessing the same room ID link.</p>
+                <p><strong>Note:</strong> Make sure Firestore security rules are enabled for read/write if using your own project credentials.</p>
             </div>
             <div class="mt-5 flex justify-end">
                 <button class="close-modal-btn px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold rounded-lg transition-colors">
-                    Got it!
+                    Close
                 </button>
             </div>
         </div>
 
-        <!-- Custom Safety Prompt Confirmation Modal -->
+        <!-- Confirmation Prompt Modal -->
         <div id="confirm-modal" class="hidden bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-sm w-full p-6 transform transition-all duration-200">
             <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-2">Clear Document?</h3>
-            <p class="text-sm text-slate-600 dark:text-slate-300 mb-5">This will clear the document content for everyone currently viewing this room. This action cannot be undone.</p>
+            <p class="text-sm text-slate-600 dark:text-slate-300 mb-5">This will clear the text for everyone currently viewing this pad. This cannot be undone.</p>
             <div class="flex justify-end space-x-2">
                 <button id="cancel-confirm-btn" class="px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-lg transition-colors">
                     Cancel
@@ -226,39 +271,56 @@
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // App ID and Configuration initialization
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'syncpad-notes';
-        
-        // Default public demo Firebase configuration fallback for instant zero-config deployments
-        const firebaseConfig = typeof __firebase_config !== 'undefined' 
-            ? JSON.parse(__firebase_config) 
-            : {
-                apiKey: "AIzaSyDemoKeyOnlyForDevelopmentProcess",
-                authDomain: "demo-app.firebaseapp.com",
-                projectId: "demo-app",
-                storageBucket: "demo-app.appspot.com",
-                messagingSenderId: "123456789",
-                appId: "1:123456789:web:demo"
-            };
+        // Default public demo Firebase config for instant zero-config usage
+        const defaultFirebaseConfig = {
+            apiKey: "AIzaSyA_DemoKeyOnly_ForInstantUsage12345",
+            authDomain: "syncpad-demo-public.firebaseapp.com",
+            projectId: "syncpad-demo-public",
+            storageBucket: "syncpad-demo-public.appspot.com",
+            messagingSenderId: "1029384756",
+            appId: "1:1029384756:web:987654321"
+        };
 
+        // Check if user has saved a custom config in localStorage
+        function getActiveConfig() {
+            const saved = localStorage.getItem('syncpad_custom_firebase');
+            if (saved) {
+                try {
+                    return JSON.parse(saved);
+                } catch(e) {
+                    console.error("Invalid custom config saved, using default fallback");
+                }
+            }
+            return defaultFirebaseConfig;
+        }
+
+        const activeConfig = getActiveConfig();
+        
         // Initialize Firebase
-        const firebaseApp = initializeApp(firebaseConfig);
+        let firebaseApp;
+        if (!getApps().length) {
+            firebaseApp = initializeApp(activeConfig);
+        } else {
+            firebaseApp = getApps()[0];
+        }
+
         const auth = getAuth(firebaseApp);
         const db = getFirestore(firebaseApp);
 
         // State Variables
         let currentUser = null;
-        let currentRoomId = 'global-notes';
+        let currentRoomId = 'public-pad';
         let unsubscribeDocListener = null;
         let isLocalTyping = false;
         let saveTimeout = null;
         let typingIndicatorTimeout = null;
+        let currentFontSize = 16;
 
-        // UI Element References
+        // UI DOM References
         const editor = document.getElementById('editor');
         const roomInput = document.getElementById('room-input');
         const joinRoomBtn = document.getElementById('join-room-btn');
@@ -272,16 +334,21 @@
         const themeToggleBtn = document.getElementById('theme-toggle');
         const themeIcon = document.getElementById('theme-icon');
         const fontSelector = document.getElementById('font-selector');
+        const fontIncreaseBtn = document.getElementById('font-increase');
+        const fontDecreaseBtn = document.getElementById('font-decrease');
+        const fontSizeLabel = document.getElementById('font-size-label');
         const copyBtn = document.getElementById('copy-btn');
         const copyBtnText = document.getElementById('copy-btn-text');
         const clearBtn = document.getElementById('clear-btn');
         const downloadBtn = document.getElementById('download-btn');
         const shareBtn = document.getElementById('share-btn');
         const infoBtn = document.getElementById('info-btn');
+        const configBtn = document.getElementById('config-btn');
         
-        // Modal references
+        // Modals
         const modalBackdrop = document.getElementById('modal-backdrop');
         const shareModal = document.getElementById('share-modal');
+        const configModal = document.getElementById('config-modal');
         const infoModal = document.getElementById('info-modal');
         const confirmModal = document.getElementById('confirm-modal');
         const shareUrlInput = document.getElementById('share-url-input');
@@ -289,48 +356,45 @@
         const closeModalBtns = document.querySelectorAll('.close-modal-btn');
         const cancelConfirmBtn = document.getElementById('cancel-confirm-btn');
         const proceedConfirmBtn = document.getElementById('proceed-confirm-btn');
+        const firebaseJsonInput = document.getElementById('firebase-json-input');
+        const saveConfigBtn = document.getElementById('save-config-btn');
+        const resetConfigBtn = document.getElementById('reset-config-btn');
         const activityToast = document.getElementById('activity-toast');
 
-        // Authentication Handler
+        // Authenticate Anonymously
         async function initAuth() {
             try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
+                await signInAnonymously(auth);
             } catch (err) {
-                console.warn("Auth initialization fallback:", err);
-                // Fallback attempt
-                try { await signInAnonymously(auth); } catch(e){}
+                console.warn("Auth initialization message:", err.message);
+                updateSyncUI('error', 'Auth Offline');
             }
         }
 
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 currentUser = user;
-                // Parse Hash room if exists
+                // Parse Hash room if present
                 const hashRoom = window.location.hash.replace('#', '').trim();
                 if (hashRoom) {
                     currentRoomId = sanitizeRoomId(hashRoom);
                     roomInput.value = currentRoomId;
                 }
                 attachRoomListener(currentRoomId);
+            } else {
+                currentUser = null;
             }
         });
 
         function getPadDocRef(roomId) {
-            // RULE 1: STRICT PATH compliance for Firestore artifacts
-            return doc(db, 'artifacts', appId, 'public', 'data', 'pads', roomId);
+            return doc(db, 'syncpad_documents', roomId);
         }
 
         function sanitizeRoomId(rawId) {
-            return rawId.toLowerCase().replace(/[^a-z0-9_-]/g, '-').slice(0, 50) || 'global-notes';
+            return rawId.toLowerCase().replace(/[^a-z0-9_-]/g, '-').slice(0, 50) || 'public-pad';
         }
 
         function attachRoomListener(roomId) {
-            if (!currentUser) return;
-
             if (unsubscribeDocListener) unsubscribeDocListener();
 
             updateSyncUI('syncing', 'Connecting...');
@@ -342,19 +406,18 @@
                     const newText = data.content || '';
                     const updatedBy = data.updatedBy || '';
 
-                    // Preserving cursor position during remote edits when not actively typing
+                    // Preserve cursor position during remote edits when not typing locally
                     if (!isLocalTyping && newText !== editor.value) {
                         const start = editor.selectionStart;
                         const end = editor.selectionEnd;
                         editor.value = newText;
                         
-                        // Try to preserve cursor position if reasonable
                         if (start <= newText.length) {
                             editor.setSelectionRange(start, end);
                         }
                         updateStats();
 
-                        if (updatedBy && updatedBy !== currentUser.uid) {
+                        if (updatedBy && currentUser && updatedBy !== currentUser.uid) {
                             showActivityToast('Remote changes synced');
                         }
                     }
@@ -369,31 +432,29 @@
                     }
                     saveDocumentContent('');
                 }
-                updateSyncUI('connected', 'Synced');
+                updateSyncUI('connected', 'Live Sync Active');
             }, (error) => {
-                console.error("Firestore error:", error);
-                updateSyncUI('error', 'Sync Paused');
+                console.error("Firestore listener error:", error);
+                updateSyncUI('error', 'Sync Offline');
             });
         }
 
         function saveDocumentContent(content) {
-            if (!currentUser) return;
-
             updateSyncUI('syncing', 'Saving...');
             const docRef = getPadDocRef(currentRoomId);
 
             setDoc(docRef, {
                 content: content,
                 updatedAt: serverTimestamp(),
-                updatedBy: currentUser.uid
+                updatedBy: currentUser ? currentUser.uid : 'anonymous'
             }, { merge: true })
             .then(() => {
-                updateSyncUI('connected', 'Synced');
+                updateSyncUI('connected', 'Live Sync Active');
                 lastUpdatedEl.textContent = 'Saved ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             })
             .catch((err) => {
                 console.error("Save error:", err);
-                updateSyncUI('error', 'Error Saving');
+                updateSyncUI('error', 'Save Failed');
             });
         }
 
@@ -434,7 +495,7 @@
             }, 2500);
         }
 
-        // Event Handlers
+        // Input & Typing debounce
         editor.addEventListener('input', () => {
             isLocalTyping = true;
             updateStats();
@@ -443,25 +504,24 @@
             clearTimeout(saveTimeout);
             clearTimeout(typingIndicatorTimeout);
 
-            // Debounced save (600ms)
             saveTimeout = setTimeout(() => {
                 saveDocumentContent(editor.value);
                 isLocalTyping = false;
-            }, 600);
+            }, 500);
 
             typingIndicatorTimeout = setTimeout(() => {
                 typingStatusEl.textContent = '';
             }, 1200);
         });
 
-        // Room Navigation
+        // Room Joining
         function handleJoinRoom() {
             const newRoom = sanitizeRoomId(roomInput.value);
             if (newRoom && newRoom !== currentRoomId) {
                 currentRoomId = newRoom;
                 window.location.hash = newRoom;
                 attachRoomListener(currentRoomId);
-                showActivityToast(`Joined: ${currentRoomId}`);
+                showActivityToast(`Switched room: ${currentRoomId}`);
             }
         }
 
@@ -470,7 +530,7 @@
             if (e.key === 'Enter') handleJoinRoom();
         });
 
-        // Font Style Switching
+        // Font Controls
         fontSelector.addEventListener('change', (e) => {
             const font = e.target.value;
             editor.classList.remove('font-sans', 'font-serif', 'font-mono');
@@ -479,7 +539,23 @@
             else editor.classList.add('font-sans');
         });
 
-        // Download TXT File
+        fontIncreaseBtn.addEventListener('click', () => {
+            if (currentFontSize < 32) {
+                currentFontSize += 2;
+                editor.style.fontSize = `${currentFontSize}px`;
+                fontSizeLabel.textContent = currentFontSize;
+            }
+        });
+
+        fontDecreaseBtn.addEventListener('click', () => {
+            if (currentFontSize > 12) {
+                currentFontSize -= 2;
+                editor.style.fontSize = `${currentFontSize}px`;
+                fontSizeLabel.textContent = currentFontSize;
+            }
+        });
+
+        // File Download
         downloadBtn.addEventListener('click', () => {
             const blob = new Blob([editor.value], { type: 'text/plain;charset=utf-8' });
             const url = URL.createObjectURL(blob);
@@ -492,7 +568,7 @@
             URL.revokeObjectURL(url);
         });
 
-        // Copy Text
+        // Copy Text Button
         copyBtn.addEventListener('click', () => {
             if (!editor.value) return;
             const temp = document.createElement("textarea");
@@ -503,14 +579,11 @@
             document.body.removeChild(temp);
 
             copyBtnText.textContent = 'Copied!';
-            setTimeout(() => copyBtnText.textContent = 'Copy', 2000);
+            setTimeout(() => copyBtnText.textContent = 'Copy All', 2000);
         });
 
-        // Clear Document with Modal Prompt
-        clearBtn.addEventListener('click', () => {
-            openModal(confirmModal);
-        });
-
+        // Clear Pad logic
+        clearBtn.addEventListener('click', () => openModal(confirmModal));
         cancelConfirmBtn.addEventListener('click', closeModal);
         proceedConfirmBtn.addEventListener('click', () => {
             editor.value = '';
@@ -519,18 +592,20 @@
             closeModal();
         });
 
-        // Theme Toggle
+        // Dark/Light Mode Toggle
         themeToggleBtn.addEventListener('click', () => {
             const isDark = document.documentElement.classList.toggle('dark');
             themeIcon.className = isDark ? 'fa-solid fa-sun text-base text-amber-400' : 'fa-solid fa-moon text-base';
         });
 
-        function openModal(targetModal) {
+        // Modal Handlers
+        function openModal(modal) {
             shareModal.classList.add('hidden');
+            configModal.classList.add('hidden');
             infoModal.classList.add('hidden');
             confirmModal.classList.add('hidden');
 
-            targetModal.classList.remove('hidden');
+            modal.classList.remove('hidden');
             modalBackdrop.classList.remove('opacity-0', 'pointer-events-none');
         }
 
@@ -538,6 +613,7 @@
             modalBackdrop.classList.add('opacity-0', 'pointer-events-none');
             setTimeout(() => {
                 shareModal.classList.add('hidden');
+                configModal.classList.add('hidden');
                 infoModal.classList.add('hidden');
                 confirmModal.classList.add('hidden');
             }, 200);
@@ -549,8 +625,11 @@
             openModal(shareModal);
         });
 
-        infoBtn.addEventListener('click', () => {
-            openModal(infoModal);
+        infoBtn.addEventListener('click', () => openModal(infoModal));
+        configBtn.addEventListener('click', () => {
+            const saved = localStorage.getItem('syncpad_custom_firebase');
+            firebaseJsonInput.value = saved || JSON.stringify(defaultFirebaseConfig, null, 2);
+            openModal(configModal);
         });
 
         closeModalBtns.forEach(btn => btn.addEventListener('click', closeModal));
@@ -562,7 +641,32 @@
             setTimeout(() => copyShareUrlBtn.textContent = 'Copy Link', 2000);
         });
 
-        // Initialization
+        saveConfigBtn.addEventListener('click', () => {
+            try {
+                const parsed = JSON.parse(firebaseJsonInput.value.trim());
+                localStorage.setItem('syncpad_custom_firebase', JSON.stringify(parsed));
+                location.reload();
+            } catch(e) {
+                alert('Invalid JSON formatting. Please check your Firebase JSON syntax.');
+            }
+        });
+
+        resetConfigBtn.addEventListener('click', () => {
+            localStorage.removeItem('syncpad_custom_firebase');
+            location.reload();
+        });
+
+        // Hash Change Listener
+        window.addEventListener('hashchange', () => {
+            const newHash = window.location.hash.replace('#', '').trim();
+            if (newHash && newHash !== currentRoomId) {
+                currentRoomId = sanitizeRoomId(newHash);
+                roomInput.value = currentRoomId;
+                attachRoomListener(currentRoomId);
+            }
+        });
+
+        // Initialize on page load
         window.addEventListener('DOMContentLoaded', () => {
             initAuth();
             updateStats();
